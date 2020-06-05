@@ -10,4 +10,8 @@ public interface CartService {
 
 	public Integer getProductCountInCart(Integer userId);
 
+	public void updateCartDetailsByUserId(Integer userId, Order order);
+
+	public void deleteFromCart(Integer userId, Integer productId, Integer orderId);
+
 }

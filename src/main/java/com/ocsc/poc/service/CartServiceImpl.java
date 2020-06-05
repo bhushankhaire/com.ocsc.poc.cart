@@ -41,34 +41,42 @@ public class CartServiceImpl implements CartService {
 
 	@Override
 	public Order getCartDetailsByUserId(Integer userId) {
-		Optional<OrderEntity> orderEntity = orderRepository.findCartByUserId(userId);
-		if (orderEntity.isPresent()) {
-			Order order = new Order();
-			order.setUserId(userId);
-			order.setOrderId(orderEntity.get().getOrderId());
-			order.setOrderStatus(orderEntity.get().getOrderStatus());
+		try {
+			Optional<OrderEntity> orderEntity = orderRepository.findCartByUserId(userId);
+			if (orderEntity.isPresent()) {
+				Order order = new Order();
+				order.setUserId(userId);
+				order.setOrderId(orderEntity.get().getOrderId());
+				order.setOrderStatus(orderEntity.get().getOrderStatus());
 
-			List<OrderDetails> orderDetailsList = new ArrayList<>();
-			List<ProductDetails> productDetailsList = new ArrayList<>();
+				List<OrderDetails> orderDetailsList = new ArrayList<>();
+				List<ProductDetails> productDetailsList = new ArrayList<>();
 
-			List<OrderDetailsEntity> orderDetailsEntityList = orderDetailsRepository
-					.findOrderDetailsByOrderId(orderEntity.get().getOrderId());
+				List<OrderDetailsEntity> orderDetailsEntityList = orderDetailsRepository
+						.findOrderDetailsByOrderId(orderEntity.get().getOrderId());
 
-			if (null != orderDetailsEntityList) {
-				productDetailsList = getProductDetails(
-						orderDetailsEntityList.stream().map(e -> e.getProductId()).collect(Collectors.toList()));
+				if (null != orderDetailsEntityList) {
+					productDetailsList = getProductDetails(
+							orderDetailsEntityList.stream().map(e -> e.getProductId()).collect(Collectors.toList()));
+				}
+
+				for (OrderDetailsEntity oe : orderDetailsEntityList) {
+					ProductDetails pd = productDetailsList.stream()
+							.filter(e -> e.getProductId().equals(oe.getProductId())).findFirst().get();
+					OrderDetails od = new OrderDetails(oe.getOrderDetailsId(), pd, oe.getProductQuantity());
+					orderDetailsList.add(od);
+				}
+				order.setOrderDetailsList(orderDetailsList);
+				return order;
+			} else {
+				throw new RecordNotFoundException("No cart details found");
 			}
-
-			for (OrderDetailsEntity oe : orderDetailsEntityList) {
-				ProductDetails pd = productDetailsList.stream().filter(e -> e.getProductId().equals(oe.getProductId()))
-						.findFirst().get();
-				OrderDetails od = new OrderDetails(oe.getOrderDetailsId(), pd, oe.getProductQuantity());
-				orderDetailsList.add(od);
+		} catch (Exception ex) {
+			if (!(ex instanceof RecordNotFoundException)) {
+				throw new TechnicalException(ex.getMessage());
+			} else {
+				throw ex;
 			}
-			order.setOrderDetailsList(orderDetailsList);
-			return order;
-		} else {
-			throw new RecordNotFoundException("No cart details found");
 		}
 	}
 
@@ -86,27 +94,69 @@ public class CartServiceImpl implements CartService {
 
 	@Override
 	public void addToCart(Integer userId, Integer productId) {
-		Optional<OrderEntity> oe = orderRepository.findCartByUserId(userId);
-		OrderEntity orderEntity;
-		if (!oe.isPresent()) {
-			orderEntity = new OrderEntity();
-			orderEntity.setUserId(userId);
-			orderEntity.setOrderStatus("CART");
-			orderEntity = orderRepository.save(orderEntity);
-		} else {
-			orderEntity = oe.get();
+		try {
+			Optional<OrderEntity> oe = orderRepository.findCartByUserId(userId);
+			OrderEntity orderEntity;
+			if (!oe.isPresent()) {
+				orderEntity = new OrderEntity();
+				orderEntity.setUserId(userId);
+				orderEntity.setOrderStatus("CART");
+				orderEntity = orderRepository.save(orderEntity);
+			} else {
+				orderEntity = oe.get();
+			}
+			OrderDetailsEntity ode = new OrderDetailsEntity();
+			ode.setProductId(productId);
+			ode.setProductQuantity(1);
+			ode.setOrderId(orderEntity.getOrderId());
+			orderDetailsRepository.save(ode);
+		} catch (Exception ex) {
+			throw new TechnicalException(ex.getMessage());
 		}
-		OrderDetailsEntity ode = new OrderDetailsEntity();
-		ode.setProductId(productId);
-		ode.setProductQuantity(1);
-		ode.setOrderId(orderEntity.getOrderId());
-		orderDetailsRepository.save(ode);
-
 	}
 
 	@Override
 	public Integer getProductCountInCart(Integer userId) {
 		return orderRepository.getProductCountInCart(userId);
+	}
+
+	@Override
+	public void updateCartDetailsByUserId(Integer userId, Order order) {
+
+		try {
+			Optional<OrderEntity> oe = orderRepository.findById(order.getOrderId());
+			if (oe.get().getUserId().equals(userId)) {
+				oe.get().setOrderStatus("INITIATED");
+
+				List<OrderDetailsEntity> od = orderDetailsRepository.findOrderDetailsByOrderId(order.getOrderId());
+				od.stream().forEach(e -> {
+					order.getOrderDetailsList().stream().forEach(e1 -> {
+						if (e.getProductId().equals(e1.getProductDetails().getProductId())) {
+							e.setProductQuantity(e1.getProductQuantity());
+						}
+					});
+
+				});
+
+				od.stream().forEach(e -> orderDetailsRepository.save(e));
+				orderRepository.save(oe.get());
+			}
+		} catch (Exception ex) {
+			throw new TechnicalException(ex.getMessage());
+		}
+	}
+
+	@Override
+	public void deleteFromCart(Integer userId, Integer productId, Integer orderId) {
+		try {
+			Optional<OrderEntity> oe = orderRepository.findById(orderId);
+			if (oe.get().getUserId().equals(userId)) {
+				OrderDetailsEntity ode = orderDetailsRepository.findbyProductIdAndOrderId(productId, orderId);
+				orderDetailsRepository.delete(ode);
+			}
+		} catch (Exception ex) {
+			throw new TechnicalException(ex.getMessage());
+		}
 	}
 
 }

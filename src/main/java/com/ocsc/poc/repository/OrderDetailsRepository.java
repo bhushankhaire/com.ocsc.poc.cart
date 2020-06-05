@@ -14,4 +14,7 @@ public interface OrderDetailsRepository extends JpaRepository<OrderDetailsEntity
 	@Query("SELECT o FROM OrderDetailsEntity o  WHERE o.orderId =?1")
 	List<OrderDetailsEntity> findOrderDetailsByOrderId(Integer orderId);
 
+	@Query("SELECT o FROM OrderDetailsEntity o  WHERE o.productId =?1 and o.orderId =?2")
+	OrderDetailsEntity findbyProductIdAndOrderId(Integer productId, Integer orderId);
+
 }
