@@ -35,7 +35,7 @@ public class CartServiceImpl implements CartService {
 	@Autowired
 	RestTemplate restTemplate;
 
-	final String GET_PRODUCTS = "http://localhost:8081/products/";
+	final String GET_PRODUCTS = "http://product-service:8081/products/";
 
 	Logger logger;
 
