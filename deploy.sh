@@ -3,4 +3,5 @@
 
 #!/bin/bash
 #sudo runuser -l opc -c "sudo docker login -u '<username>' -p '<ocir-token>' <region-prefix-name>"
+sudo sed -ie "s/BUILD_NUMBER/$BUILD_NUMBER/g" deployment.yml
 sudo runuser -l opc -c 'kubectl apply -f /var/lib/jenkins/workspace/com.ocsc.poc.cart/deployment.yml'

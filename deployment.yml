@@ -28,7 +28,8 @@ spec:
         app: cart-app
     spec:
       containers:
-      - image: bom.ocir.io/yzguo69kabyn/bkhaire/com.ocsc.poc.cart:latest
+      - image: bom.ocir.io/yzguo69kabyn/bkhaire/com.ocsc.poc.cart:BUILD_NUMBER
+        imagePullPolicy: Always
         name: cart-api
         ports:
           - containerPort: 8080
